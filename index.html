@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>dBm 功率換算器</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101616;color:#eff5ec;font:16px/1.6 "Inter",system-ui,sans-serif}main{max-width:960px;margin:auto;padding:9vh 24px}header{border-bottom:1px solid #52615b;padding-bottom:24px}h1{font-size:clamp(32px,6vw,56px);letter-spacing:-.05em;margin:0}header p{color:#b7c1bc;margin:4px 0}section{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin:28px 0}article{border:1px solid #40504b;background:#1a2321;border-radius:16px;padding:24px}h2{font-size:18px;margin:0 0 16px}label{display:block}.entry{display:flex;align-items:center;gap:12px;background:#111816;padding:8px 16px;border:1px solid #52605b;border-radius:8px;margin:8px 0}.entry input{background:none;color:inherit;border:0;width:100%;font:500 26px monospace;padding:6px 0}.entry span,small{color:#c1ccc4}.toggle{display:flex;align-items:center;gap:10px;font-weight:bold}.toggle input{accent-color:#c1ef79;width:20px;height:20px}fieldset{border:0;padding:0;margin:12px 0 0}fieldset:disabled{opacity:.55}select{width:100%;font:inherit;background:#19221f;color:#eef5ee;border:1px solid #63736b;border-radius:7px;padding:8px}output{display:block;color:#c9f995;font:500 clamp(36px,7vw,72px)/1.35 ui-monospace,monospace;overflow-wrap:anywhere}.result{border-top:3px solid #b6e67f;background:linear-gradient(115deg,#243129,#19231e)}.result p{margin:6px 0 0;color:#d0dbce}footer{margin-top:22px;color:#b6c4b9}button{padding:5px 10px;border-radius:6px;background:#26322c;border:1px solid #4e6055;color:#dbe7dc;cursor:pointer;margin:4px 4px 0 0}button:hover{background:#39483c}:focus-visible{outline:2px solid #c1ef79;outline-offset:3px}@media(max-width:650px){main{padding:32px 16px}section{grid-template-columns:1fr;gap:12px;margin:18px 0}article{padding:18px}}
+</style>
+<main><header><h1>dBm 功率換算器</h1><p>輸入功率讀值，即時換算為瓦特（W）。</p></header>
+<section><article><h2><label for="power">功率讀值</label></h2><div class="entry"><input id="power" type="number" step="any" value="0"><span>dBm</span></div><div id="presets" aria-label="常用讀值"><button>−30 dBm</button><button>0 dBm</button><button>30 dBm</button></div></article>
+<article><label class="toggle"><input id="enabled" type="checkbox">計入衰減</label><fieldset id="settings" disabled><label for="loss">衰減量</label><div class="entry"><input id="loss" type="number" min="0" step="any" value="10"><span>dB</span></div><select id="direction" aria-label="換算方向"><option value="1">從量測值回推衰減前功率</option><option value="-1">從輸入值計算衰減後功率</option></select></fieldset></article></section>
+<article class="result" aria-live="polite"><h2 id="caption">換算功率</h2><output id="watts"></output><p id="detail"></p></article><footer>換算公式　P（W）＝ 10<sup>（dBm − 30）/ 10</sup></footer></main>
+<script>
+const byId = id => document.getElementById(id);
+const power = byId('power'), loss = byId('loss'), enabled = byId('enabled'), direction = byId('direction');
+function update(){
+ const active = enabled.checked, reverse = direction.value === '1';
+ byId('settings').disabled = !active;
+ byId('caption').textContent = active ? (reverse ? '衰減前功率' : '衰減後功率') : '換算功率';
+ const p = power.valueAsNumber, a = loss.valueAsNumber;
+ let message = '';
+ if (!Number.isFinite(p)) message = '請輸入有效的 dBm 讀值。';
+ else if (active && (!Number.isFinite(a) || a < 0)) message = '請輸入大於或等於 0 的衰減量。';
+ const adjusted = p + (active ? (reverse ? a : -a) : 0);
+ const watts = 10 ** ((adjusted - 30) / 10);
+ if (!message && (!Number.isFinite(watts) || watts === 0)) message = '結果超出可顯示範圍。';
+ const format = n => String(Number(n.toPrecision(9)));
+ byId('watts').textContent = message ? '—' : format(watts) + ' W';
+ byId('detail').textContent = message || (active ? p + ' dBm ' + (reverse ? '+ ' : '− ') + a + ' dB = ' : '') + format(adjusted) + ' dBm';
+}
+document.addEventListener('input',update);
+byId('presets').addEventListener('click',event=>{
+ if(event.target.tagName==='BUTTON'){power.value=parseFloat(event.target.textContent.replace('−','-'));update();}
+});
+update();
+</script></html>
