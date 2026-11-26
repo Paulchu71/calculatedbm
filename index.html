@@ -10,6 +10,20 @@
 <script>
 const byId = id => document.getElementById(id);
 const power = byId('power'), loss = byId('loss'), enabled = byId('enabled'), direction = byId('direction');
+function significantDigits(value) {
+ const mantissa = value.split(/e/i)[0].replace(/^[+-]/, '');
+ const digits = mantissa.replace('.', '').replace(/^0+/, '');
+ if (digits.length) return digits.length;
+ return Math.max(1, (mantissa.split('.')[1] || '').length);
+}
+
+function formatPower(value, digits) {
+ if (value === 0) return digits === 1 ? '0' : '0.' + '0'.repeat(digits);
+ const rounded = value.toPrecision(digits);
+ // An exponent makes the precision of whole numbers ending in zero explicit.
+ return /^-?\d+0$/.test(rounded) ? value.toExponential(digits - 1) : rounded;
+}
+
 function update(){
  const active = enabled.checked, reverse = direction.value === '1';
  byId('settings').disabled = !active;
@@ -21,9 +35,10 @@ function update(){
  const adjusted = p + (active ? (reverse ? a : -a) : 0);
  const watts = 10 ** ((adjusted - 30) / 10);
  if (!message && (!Number.isFinite(watts) || watts === 0)) message = '結果超出可顯示範圍。';
- const format = n => String(Number(n.toPrecision(9)));
- byId('watts').textContent = message ? '—' : format(watts) + ' W';
- byId('detail').textContent = message || (active ? p + ' dBm ' + (reverse ? '+ ' : '− ') + a + ' dB = ' : '') + format(adjusted) + ' dBm';
+ const digits = significantDigits(power.value);
+ if (!message && digits > 100) message = '最多可顯示 100 位有效數字。';
+ byId('watts').textContent = message ? '—' : formatPower(watts, digits) + ' W';
+ byId('detail').textContent = message || (active ? power.value + ' dBm ' + (reverse ? '+ ' : '− ') + loss.value + ' dB = ' : '') + formatPower(adjusted, digits) + ' dBm';
 }
 document.addEventListener('input',update);
 byId('presets').addEventListener('click',event=>{
